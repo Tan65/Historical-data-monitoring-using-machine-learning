@@ -1,0 +1,88 @@
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import classification_report, confusion_matrix
+import matplotlib.pyplot as plt
+
+# Step 1: Simulate historical MRI data for monitoring (You can replace this with your real dataset)
+# For historical data, let's assume features change over time for multiple patients
+
+# Example: Columns could be 'Patient_ID', 'Mean_Intensity', 'Texture_Score', 'Sharpness', 'Age', 'Date', 'Diagnosis'
+data = pd.DataFrame({
+    'Patient_ID': np.random.randint(1, 21, 200),  # 20 unique patients
+    'Mean_Intensity': np.random.normal(100, 20, 200),
+    'Texture_Score': np.random.normal(50, 10, 200),
+    'Sharpness': np.random.normal(70, 15, 200),
+    'Age': np.random.randint(20, 80, 200),
+    'Diagnosis': np.random.choice(['Healthy', 'Abnormal'], 200, p=[0.7, 0.3]),
+    'Date': pd.date_range(start='1/1/2000', periods=200, freq='D')
+})
+
+# Display first few rows of data
+print(data.head())
+
+# Step 2: Prepare Features and Labels
+# We can use 'Mean_Intensity', 'Texture_Score', 'Sharpness', 'Age' as features
+# 'Diagnosis' will be the label (target)
+X = data[['Mean_Intensity', 'Texture_Score', 'Sharpness', 'Age']]
+y = data['Diagnosis']
+
+# Encode the Diagnosis labels (Healthy = 0, Abnormal = 1)
+le = LabelEncoder()
+y_encoded = le.fit_transform(y)
+
+# Step 3: Train-test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
+
+# Step 4: Feature Scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Step 5: Build and Train Neural Network Model
+# Neural Network Model for binary classification (Healthy/Abnormal)
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(64, activation='relu', input_shape=(X_train_scaled.shape[1],)),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(1, activation='sigmoid')  # Output layer with sigmoid for binary classification
+])
+
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(X_train_scaled, y_train, epochs=50, batch_size=16, validation_split=0.2, verbose=0)
+
+# Step 6: Model Evaluation
+y_pred = model.predict(X_test_scaled).flatten()
+y_pred_classes = (y_pred > 0.5).astype(int)  # Convert probabilities to class labels (0 or 1)
+
+# Print Classification Report and Confusion Matrix
+print("\nClassification Report:\n")
+print(classification_report(y_test, y_pred_classes, target_names=le.classes_))
+
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred_classes))
+
+# Step 7: Visualize Training History
+# Plot training and validation accuracy/loss
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.title('Training vs Validation Accuracy')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Training vs Validation Loss')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
